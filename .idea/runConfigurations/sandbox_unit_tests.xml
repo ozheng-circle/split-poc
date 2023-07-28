@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="sandbox unit tests" type="JUnit" factoryName="JUnit">
+    <module name="sandbox" />
+    <option name="MAIN_CLASS_NAME" value="" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="pattern" />
+    <option name="VM_PARAMETERS" value="-ea --add-opens=java.base/java.lang=ALL-UNNAMED" />
+    <option name="PARAMETERS" value="" />
+    <envs>
+      <env name="APP_CONFIG_OPTION_AUTH_SERVER_URL" value="https://localhost:9091/" />
+      <env name="APP_CONFIG_OPTION_TRUST_SELF_SIGNED_CERTIFICATES" value="true" />
+    </envs>
+    <patterns>
+      <pattern testClass="^(?!.*IT$).*$" />
+    </patterns>
+    <method v="2">
+      <option name="Make" enabled="true" />
+      <option name="Maven.BeforeRunTask" enabled="true" file="$PROJECT_DIR$/pom.xml" goal="compile" />
+    </method>
+  </configuration>
+</component>

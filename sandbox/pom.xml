@@ -1,0 +1,359 @@
+<!--
+  - Copyright (c) 2023 Circle Internet Financial Trading Company Limited.
+  - All rights reserved.
+  -
+  - Circle Internet Financial Trading Company Limited CONFIDENTIAL
+  -
+  - This file includes unpublished proprietary source code of Circle Internet
+  - Financial Trading Company Limited, Inc. The copyright notice above does not
+  - evidence any actual or intended publication of such source code. Disclosure
+  - of this source code or any related proprietary information is strictly
+  - prohibited without the express written permission of Circle Internet Financial
+  - Trading Company Limited.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <parent>
+        <groupId>com.circle</groupId>
+        <artifactId>sandbox-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <name>sandbox</name>
+    <artifactId>sandbox</artifactId>
+    <packaging>jar</packaging>
+    <version>0.0.1-SNAPSHOT</version>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>com.circle</groupId>
+            <artifactId>platform-common-utils</artifactId>
+            <version>${platform.common.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.circle.blockchain.evm</groupId>
+            <artifactId>evm-common</artifactId>
+            <version>${blockchain.evm.common.version}</version>
+        </dependency>
+
+        <!-- Test dependencies -->
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.19.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.dropwizard</groupId>
+            <artifactId>dropwizard-testing</artifactId>
+            <version>${dropwizard-testing.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>3.3.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpclient</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.jayway.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>1.7.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.circle</groupId>
+            <artifactId>platform-common-test</artifactId>
+            <version>${platform.common.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/../</directory>
+                <includes>
+                    <include>db/postgres/**/*.sql</include>
+                </includes>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+            <testResource>
+                <directory>${project.basedir}</directory>
+                <includes>
+                    <include>sandbox.yml</include>
+                    <include>keystore.jks</include>
+                </includes>
+            </testResource>
+            <testResource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+        <plugins>
+
+            <!-- Shade prepares a Fat JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <mainClass>com.circle.sandbox.Application</mainClass>
+                                    </manifestEntries>
+                                </transformer>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                                    <resource>sandbox.yml</resource>
+                                    <file>sandbox.yml</file>
+                                </transformer>
+                            </transformers>
+                            <!--<shadedArtifactAttached>true</shadedArtifactAttached>-->
+                            <!--<shadedClassifierName>shaded</shadedClassifierName>-->
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- JAR target -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-jar</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <useDefaultManifestFile>true</useDefaultManifestFile>
+                            <archive>
+                                <manifest>
+                                    <mainClass>com.circle.sandbox.Application</mainClass>
+                                </manifest>
+                            </archive>
+                        </configuration>
+                    </execution>
+                    <!-- Test JAR -->
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <digestRule implementation="com.circle.enforcer.DigestRule">
+                                    <!-- Create a snapshot to build the list of URNs below -->
+                                    <buildSnapshot>${enforcer.buildSnapshot}</buildSnapshot>
+                                    <urns>
+                                    </urns>
+                                </digestRule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.circle.maven.plugins</groupId>
+                        <artifactId>digest-enforcer-rules</artifactId>
+                        <version>0.0.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <!-- command: create db <ymlfile>-->
+                    <execution>
+                        <id>create-db</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.migration}</skip>
+                            <mainClass>com.circle.sandbox.Application</mainClass>
+                            <arguments>
+                                <argument>createdb</argument>
+                                <argument>${project.build.directory}/test-classes/sandbox.yml</argument>
+                            </arguments>
+                            <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                        </configuration>
+                    </execution>
+
+                    <!-- dropwizard-flyway command: db migrate <ymlfile>-->
+                    <execution>
+                        <id>db-migration</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.migration}</skip>
+                            <mainClass>com.circle.sandbox.Application</mainClass>
+                            <arguments>
+                                <argument>flyway</argument>
+                                <argument>migrate</argument>
+                                <argument>${project.build.directory}/test-classes/sandbox.yml</argument>
+                            </arguments>
+                            <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                        </configuration>
+                    </execution>
+
+                    <!--dropwizard-flyway command: db info <ymlfile>-->
+                    <execution>
+                        <id>db-info</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.migration}</skip>
+                            <mainClass>com.circle.sandbox.Application</mainClass>
+                            <arguments>
+                                <argument>flyway</argument>
+                                <argument>info</argument>
+                                <argument>${project.build.directory}/test-classes/sandbox.yml</argument>
+                            </arguments>
+                            <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Unit Tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <configuration>
+                    <skipTests>${skipTests}</skipTests>
+                    <argLine>--add-opens=java.base/java.lang=ALL-UNNAMED</argLine>
+                    <!-- Exclude IntegrationTest category from unit tests -->
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
+                    <reportsDirectory>${basedir}/target/reports/surefire-reports</reportsDirectory>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <!-- surefire-junit47 required for category support -->
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit47</artifactId>
+                        <version>${surefire.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <!-- Integration Tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <!--<forkedProcessTimeoutInSeconds>120</forkedProcessTimeoutInSeconds>-->
+                    <skipTests>${skipTests}</skipTests>
+                    <argLine>--add-opens=java.base/java.lang=ALL-UNNAMED</argLine>
+                    <reportsDirectory>${basedir}/target/reports/failsafe-reports</reportsDirectory>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <!-- surefire-junit47 required for category support -->
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit47</artifactId>
+                        <version>${surefire.version}</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

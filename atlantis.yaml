@@ -1,0 +1,12 @@
+version: 3
+automerge: false
+parallel_plan: true
+projects:
+- name: dev-shared1
+  dir: "deploy/tf/accounts/dev"
+  workspace: shared1
+  terraform_version: 1.3.9
+- name: ops-prod
+  dir: "deploy/tf/accounts/ops"
+  workspace: prod
+  terraform_version: 1.3.9

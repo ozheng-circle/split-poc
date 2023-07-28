@@ -1,0 +1,59 @@
+target
+log
+logs
+
+# Eclipse
+.settings/
+.project
+.classpath
+
+
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
+# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+
+# We'll keep all .idea files for easier local IDE setup.
+
+# Maven
+dependency-reduced-pom.xml
+
+# CMake
+cmake-build-*/
+
+# File-based project format
+*.iws
+
+# IntelliJ
+out/
+*.iml
+
+# Logs
+sandbox/logs
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# JIRA plugin
+atlassian-ide-plugin.xml
+
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# MacOS finder hint file
+.DS_Store
+
+# Emacs
+*~
+
+# Terraform
+**/.terraform
+circle-terraform
+
+# Helm
+circle-helm-charts
+
+sandbox.pid
+
+.vscode

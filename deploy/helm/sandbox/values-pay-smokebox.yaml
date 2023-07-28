@@ -1,0 +1,43 @@
+common:
+  workspace: "smokebox"
+deployments:
+  sandbox:
+    container:
+      envvars:
+        APP_ENV: "smokebox"
+        APP_CONFIG_OPTION_PG_URL: "smokebox-apps-psql14.cluster-cgmzf43mtsl2.us-east-1.rds.amazonaws.com:5432/sandbox?autoReconnect=true&useSSL=true"
+        APP_CONFIG_OPTION_AUTH_SERVER_URL: "https://a18ba0107c97e42579dc527f0b51de3c-8b85e86b665cf93c.elb.us-east-1.amazonaws.com/auth"
+      envvars_secrets:
+        APP_CONFIG_OPTION_piReadOnlyDatabase_password:
+          name: pi-db-apps-psql14
+          key: password
+    migrations:
+      container:
+        envvars:
+          APP_CONFIG_OPTION_PG_URL: "smokebox-apps-psql14.cluster-cgmzf43mtsl2.us-east-1.rds.amazonaws.com:5432/sandbox?autoReconnect=true&useSSL=true"
+          APP_CONFIG_OPTION_PG_URL_CREATEDB: "smokebox-apps-psql14.cluster-cgmzf43mtsl2.us-east-1.rds.amazonaws.com:5432/postgres?autoReconnect=true&useSSL=true"
+        envvars_secrets:
+          APP_CONFIG_OPTION_createdb_user:
+            name: shared-dbmaster-apps-psql14
+            key: user
+          APP_CONFIG_OPTION_createdb_password:
+            name: shared-dbmaster-apps-psql14
+            key: password
+          APP_CONFIG_OPTION_migrations_user:
+            name: shared-dbmaster-apps-psql14
+            key: user
+          APP_CONFIG_OPTION_migrations_password:
+            name: shared-dbmaster-apps-psql14
+            key: password
+    networkPolicy:
+      toFQDNs:
+        - matchNames:
+            - "smokebox-apps-psql14.cluster-cgmzf43mtsl2.us-east-1.rds.amazonaws.com"
+          ports:
+            - port: 5432
+              protocol: TCP
+        - matchNames:
+            - "a18ba0107c97e42579dc527f0b51de3c-8b85e86b665cf93c.elb.us-east-1.amazonaws.com"
+          ports:
+            - port: 443
+              protocol: TCP

@@ -1,0 +1,87 @@
+common:
+  name: sandbox
+  repo: 514563129364.dkr.ecr.us-east-1.amazonaws.com/circle-apps/sandbox
+  logTagSvc: sandbox
+
+statsd:
+  namespace: "circle.sandbox"
+
+deployments:
+  sandbox:
+    serviceAccount:
+      create: true
+      roleArn: "" # TODO add arn
+    useTelemetry:
+      javaAutoInstrumentation: true
+    resiliency:
+      minReplicaCount: "30%"
+      maxReplicaCount: 2
+      desiredReplicaCount: 2
+      targetCPUUtilizationPercentage: ""  # disabled
+      usePdb: true
+    ingress:
+      backendProtocol: HTTPS
+      internalRules:
+        - path: "/sandbox(/|$)(.*)"
+          rewriteTarget: "/$2"
+    container:
+      port: 11121  # target port
+      probes:
+        type: http
+        period: 10
+        timeout: 1
+        thresholds:
+          startup: 18
+          readiness: 3
+          liveness: 3
+        config:
+          path: /api/ping
+          port: app-port # Same as `container.port`
+          scheme: HTTPS
+      resources:
+        requests:
+          memory: "356Mi"
+          cpu: "100m"
+        limits:
+          memory: "1024Mi"
+          cpu: "300m"
+      envvars:
+        APP_ENV: ""
+        SECRET_TYPE: env
+        JAVA_MEMORY_OPTIONS: "-XX:MaxRAMPercentage=90.0"
+        _JAVA_OPTIONS: "$(JAVA_MEMORY_OPTIONS) $(JAVA_TELEMETRY_OPTIONS)"
+        APP_CONFIG_OPTION_PG_URL: ""
+        APP_CONFIG_OPTION_AUTH_SERVER_URL: ""
+        APP_CONFIG_OPTION_authServer_clientId: sandbox
+        APP_CONFIG_OPTION_database_user: sandbox_dbuser
+        PROFILING_ENABLED: "false"
+        MEMORY_PROFILING_ENABLED: "false"
+      envvars_secrets:
+        APP_CONFIG_OPTION_database_password:
+          name: sandbox-dbgeneral
+          key: password
+        APP_CONFIG_OPTION_authServer_clientSecret:
+          name: sandbox-authserver
+          key: clientSecret
+
+    migrations:
+      container:
+        command: 
+          - "/usr/local/circle/migrations.sh"
+        envvars:
+          APP_CONFIG_OPTION_DB_MIGRATION_LOCATIONS: "db/postgres/sandbox"
+          APP_CONFIG_OPTION_PG_URL_CREATEDB: ""
+          _JAVA_OPTIONS: "$(JAVA_MEMORY_OPTIONS)"
+        envvars_secrets:
+          APP_CONFIG_OPTION_createdb_user:
+            name: shared-dbmaster
+            key: user
+          APP_CONFIG_OPTION_createdb_password:
+            name: shared-dbmaster
+            key: password
+          APP_CONFIG_OPTION_migrations_user:
+            name: shared-dbmaster
+            key: user
+          APP_CONFIG_OPTION_migrations_password:
+            name: shared-dbmaster
+            key: password

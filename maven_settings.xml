@@ -1,0 +1,56 @@
+<!-- use https rather than http -->
+<settings>
+    <!-- Put the copied dependencies in a place where Docker can cache them. -->
+    <localRepository>${user.home}/.m2/repository</localRepository>
+    <activeProfiles>
+        <!--make the profile active all the time -->
+        <activeProfile>securecentral</activeProfile>
+    </activeProfiles>
+    <servers>
+        <server>
+            <username>dev-platform</username>
+            <password>{Ii6l1YNBqkMHNnDJOp7oUXdS9pV5P2iz/NzbFOyr8R04NC2f5GKVe5PqJjXhVMVK}</password>
+            <id>central</id>
+        </server>
+        <server>
+            <username>dev-platform</username>
+            <password>{Ii6l1YNBqkMHNnDJOp7oUXdS9pV5P2iz/NzbFOyr8R04NC2f5GKVe5PqJjXhVMVK}</password>
+            <id>circle-platform</id>
+        </server>
+    </servers>
+    <profiles>
+        <profile>
+            <id>securecentral</id>
+            <!--Override the repository (and pluginRepository) "central" from the
+               Maven Super POM -->
+            <repositories>
+                <repository>
+                    <id>circle-platform</id>
+                    <url>https://artifactory.circle.com/artifactory/circle-platform</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>central</id>
+                    <url>https://artifactory.circle.com/artifactory/circle-platform</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central</id>
+                    <url>https://artifactory.circle.com/artifactory/circle-platform</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+</settings>

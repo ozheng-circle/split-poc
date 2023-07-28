@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Implementation-Title: ${project.name}
+Implementation-Version: ${project.version}
+Implementation-Vendor-Id: ${project.groupId}
+SCM-Revision: ${buildNumber}
+Build-Jdk: ${java.version}

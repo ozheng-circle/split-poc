@@ -1,0 +1,10 @@
+# CODEOWNERS must be approved by online infra team
+CODEOWNERS @circlefin/Engineering-Online-Infrastructure-Approvers
+
+# Terraform code must be approved by techops
+*.tf @circlefin/TechOps
+.terraform-version @circlefin/TechOps
+*.hcl @circlefin/TechOps
+
+# CI config for Terraform must be approved by techops
+atlantis.yaml @circlefin/TechOps

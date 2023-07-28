@@ -1,0 +1,163 @@
+---
+# Default here are for dev; prod configuration is all
+# via environment variables
+
+app:
+  environment: "${APP_ENV:-dev}"
+  team: ${TEAM:-platform}
+  name: "${APP_NAME:-sandbox}"
+  suffix: ${SUFFIX}
+  bucket: "OBSOLETE"
+  secretType: ${SECRET_TYPE:-file}
+
+# Jetty Web Server
+server:
+  minThreads: ${SERVER_MIN_THREADS:-8}
+  maxThreads: ${SERVER_MAX_THREADS:-512}
+  applicationConnectors:
+    - type: https
+      port: 11121
+      keyStorePath: ${KEYSTORE_PATH:-./keystore.jks}
+      keyStorePassword: "T3ndren!!"
+      validateCerts: false
+      supportedProtocols: ["TLSv1.2"]
+      idleTimeout: 120s
+      maxRequestHeaderSize: 640KiB
+  adminConnectors:
+    - type: https
+      port: 11122
+      keyStorePath: ${KEYSTORE_PATH:-./keystore.jks}
+      keyStorePassword: "T3ndren!!"
+      validateCerts: false
+      supportedProtocols: ["TLSv1.2"]
+      idleTimeout: 120s
+  registerDefaultExceptionMappers: false
+  requestLog:
+    appenders:
+      - type: console
+        layout:
+          type: access-json
+          prettyPrint: false
+          appendLineSeparator: true
+          includes: [timestamp, protocol, method, requestUri, statusCode, requestTime, contentLength]
+          additionalFields:
+            service: "${APP_ENV:-dev}.${APP_NAME:-sandbox}"
+          requestHeaders:
+            - X-Request-Id
+          responseHeaders:
+            - X-Request-Id
+        filterFactories:
+          - type: "access-log-exclude-ping"
+  rootPath: "/api/*"
+
+database:
+  driverClass: "org.postgresql.Driver"
+  url: "jdbc:postgresql://${APP_CONFIG_OPTION_PG_URL:-localhost:11123/sandbox?autoReconnect=true&useSSL=false}"
+  minSize: 8
+  initialSize: 8
+  maxSize: 512
+
+# Flyway
+flyway:
+  schemas:
+    - sandbox
+  defaultSchema: sandbox
+  # Locations to scan recursively for migrations, it supports classpath searching
+  # Stag/Prod should not include 'db/postgres/dev-qa'!
+  locations: [${APP_CONFIG_OPTION_DB_MIGRATION_LOCATIONS:-none}]
+  placeholders:
+    # Set the password to template in when creating, or default to the usual dev password
+    # This environment variable matches the one used to give this password to the
+    # normal app.
+    dbuser: "${DBUSER:-sandbox_dbuser}"
+    schema: "${SCHEMA:-sandbox}"
+    database_password: "${APP_CONFIG_OPTION_database_password:-3UFV9fwq-wcnX}"
+    pi_ro_database_password: "${APP_CONFIG_OPTION_piReadOnlyDatabase_password:-3UFV9fwq-wcnX}"
+  # Database migrations.
+  migrations:
+    driverClass: "org.postgresql.Driver"
+    url: "jdbc:postgresql://${APP_CONFIG_OPTION_PG_URL:-localhost:11123/sandbox?autoReconnect=true&useSSL=false}"
+    minSize: 0
+    initialSize: 0
+    maxSize: 2
+  createdb:
+    driverClass: "org.postgresql.Driver"
+    url: "jdbc:postgresql://${APP_CONFIG_OPTION_PG_URL_CREATEDB:-localhost:11123/postgres?autoReconnect=true&useSSL=false}"
+    dbName: "${APP_CONFIG_OPTION_PG_DB:-sandbox}"
+  # Allow mixing transactional and non-transactional statements within a single migration so that we can create indexes concurrently in migrations.
+  mixed: true
+
+# Auth server configuration
+authServer:
+  url: "${APP_CONFIG_OPTION_AUTH_SERVER_URL:-https://localhost:9091}"
+  faultTolerance:
+    retry:
+      maxAttempts: 3
+      retryInterval: 200ms
+    circuitBreaker:
+      failureRateThreshold: 50
+      bufferSizeInHalfOpenState: 10
+      bufferSizeInClosedState: 100
+      waitDurationInOpenState: 60s
+  jerseyClient:
+    timeout: 10s
+    connectionTimeout: 10s
+    tls:
+      trustSelfSignedCertificates: ${APP_CONFIG_OPTION_TRUST_SELF_SIGNED_CERTIFICATES:-true}
+      # Set to false because of network balancer
+      verifyHostname: ${APP_CONFIG_OPTION_VERIFY_HOSTNAME:-false}
+
+
+metrics:
+  reporters:
+    - type: datadogCircle
+      host: ${DATADOG_HOST:-localhost}
+      useCounter: true
+      tags:
+        - app_name:${APP_NAME:-sandbox}
+        - pod_name:${HOSTNAME:-unknown}
+      transport:
+        type: udp
+        prefix: circle.sandbox
+        statsdHost: ${STATSD_HOST:-localhost}
+        port: 8125
+      useRegexFilters: true
+      excludes:
+        - ^org.apache.*
+        - ^org.skife.jdbi.*
+        - ^io.dropwizard.jetty.*
+        - ^jvm.attribute.*
+        - ^jvm.buffers.*
+        - ^jvm.classloader.*
+        - ^jvm.filedescriptor.*
+        - ^jvm.threads.deadlocks
+        - ^jvm.memory.non-heap.*
+        - ^jvm.memory.pools.*
+        - ^ch.qos.logback.*
+        - ^circle.platform.sql.raw.*
+
+# Logging settings.
+logging:
+
+  # The default level of all loggers. Can be "OFF", ERROR, WARN, INFO, DEBUG, TRACE, or ALL.
+  level: "${LOG_LEVEL:-INFO}"
+
+  # Individual loggers and levels
+  loggers:
+    api: INFO
+    migration: INFO
+    sql: DEBUG
+
+  appenders:
+    - type: console
+      layout:
+        type: json
+        timestampFormat: "yyyy-MM-dd'T'HH:mm:ss.SSS"
+        additionalFields:
+          service: "${APP_ENV:-dev}.${APP_NAME:-sandbox}"
+      # Do not display log statements below this threshold to stdout.
+      threshold: ${CONSOLE_LOG_THRESHOLD:-ALL}
+      # Write to stdout or stderr
+      target: stdout
+      # The timezone used to format dates (use UTC)
+      timeZone: UTC

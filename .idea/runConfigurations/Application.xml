@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="Application" type="Application" factoryName="Application" nameIsGenerated="true">
+        <envs>
+            <env name="SUFFIX" value="&quot;-suffix&quot;" />
+            <env name="APP_CONFIG_OPTION_TRUST_SELF_SIGNED_CERTIFICATES" value="true" />
+            <env name="APP_CONFIG_OPTION_AUTH_SERVER_URL" value="https://localhost:9091" />
+        </envs>
+        <option name="MAIN_CLASS_NAME" value="com.circle.sandbox.Application" />
+        <module name="sandbox" />
+        <option name="PROGRAM_PARAMETERS" value="server ./sandbox.yml" />
+        <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />
+        <method v="2" />
+    </configuration>
+</component>

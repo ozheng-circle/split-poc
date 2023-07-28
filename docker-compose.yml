@@ -1,0 +1,63 @@
+version: '2.3'
+
+services:
+
+  postgres:
+    image: "514563129364.dkr.ecr.us-east-1.amazonaws.com/circle-dockerhub/postgres:12.0"
+    environment:
+      # From official repository, https://hub.docker.com/_/postgres/
+      # this sets up the default superuser and password as well
+      POSTGRES_USER: dba
+      POSTGRES_PASSWORD: "T3ndren!!"
+      POSTGRES_DB: postgres
+      PGDATA: /tmp/postgres/data
+    ports:
+      - "11123:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+
+  #####################
+  ### Auth Service ###
+  ####################
+  auth:
+    image: "683583236714.dkr.ecr.us-east-1.amazonaws.com/circle-apps/platform-auth:staging-deploy-current"
+    environment:
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
+      AWS_SESSION_TOKEN:
+      APP_ENV: ${APP_ENV:-dev}
+      SUFFIX: ${SUFFIX}
+      SECRET_TYPE: ${SECRET_TYPE:-file}
+      DB_HOST: postgres_auth
+      REDIS_HOST: platform-redis
+      REDIS_PORT: 6379
+      ENTITY_SERVICE_URL: "https://entity-service:8233"
+    ports:
+      - "9091:8080"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f --insecure https://localhost:8080/ping" ]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    volumes:
+      # Map in the AWS credentials for use in development
+      - "${HOME}/.aws/credentials:/root/.aws/credentials"
+      - "${HOME}/.aws/credentials:/home/circle/.aws/credentials"
+      - "./log/auth:/usr/local/circle-auth/logs"
+    depends_on:
+      - postgres_auth
+
+  postgres_auth:
+    entrypoint: gosu postgres postgres
+    image: "124945441934.dkr.ecr.us-east-1.amazonaws.com/circle-db/postgres-auth:latest"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    ports:
+      - "5470:5432"

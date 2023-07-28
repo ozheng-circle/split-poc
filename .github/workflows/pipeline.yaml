@@ -1,0 +1,96 @@
+name: pipeline
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  run_ci_tests:
+    uses: circlefin/github-shared-pipelines/.github/workflows/java-ci.yaml@java-ci-1.9.0
+    if: ${{ github.repository_owner == 'circlefin' }}
+    with:
+      repository: ${{ github.repository }}
+      branch: ${{ github.ref }}
+      run_command: "./build-dev.sh rebuild-db -Denforcer.skip=false -DbuildNumber=${{ github.sha }}"
+      start_containers: true
+
+  build_image:
+    uses: circlefin/github-shared-pipelines/.github/workflows/java-docker-build.yaml@java-docker-build-2.1.0
+    needs: run_ci_tests
+    if: github.ref == 'refs/heads/master'
+    with:
+      repository: ${{ github.repository }}
+      branch: ${{ github.ref }}
+      ecr_repo: 514563129364.dkr.ecr.us-east-1.amazonaws.com/circle-apps/sandbox
+      compile_command: "mvn -s ./maven_settings.xml clean install -DskipTests"
+      build_context: "./sandbox"
+      dockerfile: "./sandbox/Dockerfile"
+      tag_latest: true
+      push: ${{ github.ref == 'refs/heads/master' }}
+
+  deploy_nonprod:
+    uses: circlefin/github-shared-pipelines/.github/workflows/argocd-sync.yaml@argocd-sync-1.1.5
+    needs: build_image
+    strategy:
+      matrix:
+        app_name:
+          - smokebox-pay-sandbox-us-east-1
+          - stg-pay-sandbox-us-east-1
+    with:
+      docker_tag: ${{ github.sha }}
+      app_name: ${{ matrix.app_name }}
+
+  tag_stg:
+    uses: circlefin/github-shared-pipelines/.github/workflows/tag-repo.yaml@tag-repo-2.0.0
+    needs: deploy_nonprod
+    with:
+      repository: ${{ github.repository }}
+      commit: ${{ github.sha }}
+      ecr_repo: "514563129364.dkr.ecr.us-east-1.amazonaws.com/circle-apps/sandbox"
+      tag: stg
+      tag_multiarch: true
+
+  release_approval:
+    runs-on: circle-small
+    needs: tag_stg
+    environment:
+      name: prod
+    steps:
+      - run: echo "Approval successful. Proceeding to deploy to production."
+
+  deploy_prod:
+    uses: circlefin/github-shared-pipelines/.github/workflows/argocd-sync.yaml@argocd-sync-1.1.5
+    needs: release_approval
+    strategy:
+      matrix:
+        app_name:
+          - sandbox-pay-sandbox-us-east-1
+          - prod-pay-sandbox-us-east-1
+    with:
+      docker_tag: ${{ github.sha }}
+      app_name: ${{ matrix.app_name }}
+
+  tag_prod:
+    uses: circlefin/github-shared-pipelines/.github/workflows/tag-repo.yaml@tag-repo-2.0.0
+    needs: deploy_prod
+    with:
+      repository: ${{ github.repository }}
+      commit: ${{ github.sha }}
+      ecr_repo: "514563129364.dkr.ecr.us-east-1.amazonaws.com/circle-apps/sandbox"
+      tag: prod
+      tag_multiarch: true
+
+  audit:
+    if: always()
+    needs: deploy_prod
+    uses: circlefin/github-shared-pipelines/.github/workflows/audit.yaml@audit-1.1.0
+    with:
+      repository: ${{ github.repository }}
+      branch: ${{ github.ref }}
+      app_names: "prod-pay-sandbox-us-east-1,sandbox-pay-sandbox-us-east-1"
+      commiter_username: ${{ github.event.pusher.name }}
+      commiter_email: ${{ github.event.pusher.email }}
+      pipeline_run_number: ${{ github.run_number }}
+      deploy_status: ${{ needs.deploy_prod.result }}
+      commit: ${{ github.sha }}
