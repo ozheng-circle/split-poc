@@ -20,16 +20,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class TestResponseObject extends ResponseObject {
+public class TestResponseObject<T> extends ResponseObject {
 
     @JsonProperty("value")
-    private int value;
+    private T value;
 
-    public int getValue() {
+    public T getValue() {
         return value;
     }
 
-    public void setValue(int value) {
+    public void setValue(T value) {
         this.value = value;
     }
 }

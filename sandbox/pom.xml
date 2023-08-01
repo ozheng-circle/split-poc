@@ -103,6 +103,12 @@
             <version>${platform.common.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.split.client</groupId>
+            <artifactId>java-client</artifactId>
+            <version>4.8.0</version>
+        </dependency>
     </dependencies>
 
     <build>
