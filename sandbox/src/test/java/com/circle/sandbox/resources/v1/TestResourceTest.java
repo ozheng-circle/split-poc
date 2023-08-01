@@ -1,90 +1,77 @@
 package com.circle.sandbox.resources.v1;
 
-import com.circle.exceptions.ClientException;
-import com.circle.exceptions.ServerException;
-import com.circle.sandbox.codes.StatusCode;
-import com.circle.sandbox.resources.v1.responses.TestResponseObject;
-import com.circle.services.responses.ResponseWrapperObject;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.SharedMetricRegistries;
-import org.apache.commons.lang3.RandomStringUtils;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.split.client.SplitClient;
+import io.split.client.SplitClientConfig;
+import io.split.client.SplitFactoryBuilder;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import javax.ws.rs.core.Response;
+import java.io.File;
+import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestResourceTest {
     @InjectMocks
     private TestResource resource;
 
+    private SplitClient client;
+
     @Before
     public void setUp() {
-        SharedMetricRegistries.clear();
+        SplitClientConfig config = SplitClientConfig.builder()
+            .splitFile("./local-flags.yaml")
+            .setBlockUntilReadyTimeout(10000)
+            .localhostRefreshEnable(true)
+            .featuresRefreshRate(5)
+            .build();
+
+        try{
+            client = SplitFactoryBuilder.build("localhost", config).client();
+            client.blockUntilReady();
+        }catch (Exception e) {
+            throw new RuntimeException("Failed to build local split client");
+        }
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    public void getValue_success() {
-        Response actualResponse = resource.getValue(5);
+    public void testUpdateFlag_readFlag_flagUpdated () {
 
-        TestResponseObject expectedResponseObject = new TestResponseObject();
-        expectedResponseObject.setValue(5);
+        String treatment = client.getTreatment("testUser", "Feature_Flag");
+        assertThat(treatment).isEqualTo("on");
 
-        assertThat(actualResponse.getEntity()).isInstanceOf(ResponseWrapperObject.class);
+        updateFlag("Feature_Flag", "off");
 
-        TestResponseObject actualResponseObject =
-            ((ResponseWrapperObject<TestResponseObject>) actualResponse.getEntity()).getResponse();
-        assertThat(actualResponseObject.getValue()).isEqualTo(5);
+        treatment = client.getTreatment("testUser", "Feature_Flag");
+        assertThat(treatment).isEqualTo("off");
 
-        MetricRegistry registry = SharedMetricRegistries.getOrCreate("metrics-registry");
-        assertThat(registry.getCounters().get("getValueOk").getCount()).isEqualTo(1L);
+        updateFlag("Feature_Flag", "on");
     }
 
-    @Test
-    public void reportError_withStatusCodeAndPropertyName() {
-        StatusCode statusCode = StatusCode.API_PARAMETER_INVALID;
-        String propertyName = "issuerIdentifier";
-        String metricName = RandomStringUtils.randomAlphabetic(10);
+    public static void updateFlag(String flagName,  String newTreatment) {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
-        ClientException exception = new ClientException(
-            "Oops! Something went wrong!", propertyName, statusCode);
-
-        resource.reportError(metricName, exception);
-
-        MetricRegistry registry = SharedMetricRegistries.getOrCreate("metrics-registry");
-        assertThat(registry.getCounters().keySet()).contains(String.format(
-            "api.%s['statusCode:%s','property:%s']", metricName, statusCode.getCode(), propertyName));
-    }
-
-    @Test
-    public void reportError_noStatusCode() {
-        String metricName = RandomStringUtils.randomAlphabetic(10);
-
-        ServerException exception = new ServerException("Oops! Something went wrong!");
-
-        resource.reportError(metricName, exception);
-
-        MetricRegistry registry = SharedMetricRegistries.getOrCreate("metrics-registry");
-        assertThat(registry.getCounters().keySet()).contains(String.format(
-            "api.%s['statusCode:%s']", metricName, StatusCode.UNKNOWN_ERROR.getCode()));
-    }
-
-    @Test
-    public void reportError_noCircleException() {
-        String metricName = RandomStringUtils.randomAlphabetic(10);
-
-        RuntimeException exception = new RuntimeException("Oops! Something went wrong!");
-
-        resource.reportError(metricName, exception);
-
-        MetricRegistry registry = SharedMetricRegistries.getOrCreate("metrics-registry");
-        assertThat(registry.getCounters().keySet()).contains(String.format(
-            "api.%s['statusCode:%s']", metricName, StatusCode.UNKNOWN_ERROR.getCode()));
+        try {
+            JsonNode root = mapper.readTree(new File("./local-flags.yaml"));
+            for (JsonNode flag : root){
+                if (flag.has(flagName)){
+                    ObjectNode newFlag = (ObjectNode)flag.path(flagName);
+                    newFlag.put("treatment", newTreatment);
+                }
+            }
+            mapper.writerWithDefaultPrettyPrinter().writeValue(new File("./local-flags.yaml"), root);
+            Thread.sleep(5000);
+        } catch (IOException | InterruptedException e) {
+            System.err.println("Error reading or writing flag file: " + e.getMessage());
+        }
     }
 }
